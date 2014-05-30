@@ -1,7 +1,5 @@
 <?php
 
-$todo_items = [];
-
 //==================================================
 function open_list($filename = 'list_items.txt') 
 {	
@@ -22,11 +20,11 @@ function save_list($list, $filename = 'list_items.txt')
 {   
     $handle = fopen($filename, 'w');
     $string = implode("\n", $list);
-    fwrite($handle, $string . PHP_EOL);
+    fwrite($handle, $string);
     fclose($handle); 
 }
 //====================================================	
-$loaded_file = open_list();
+$todo_items = open_list();
 
 //Check if file was uploaded and no errors
 if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
@@ -41,7 +39,7 @@ if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
 		move_uploaded_file($_FILES['file1']['tmp_name'], $saved_file);	
 		
 		$uploaded_file = open_list($saved_file);
-		$loaded_file = array_merge($loaded_file, $uploaded_file);
+		$todo_items = array_merge($todo_items, $uploaded_file);
 	}else {
 		echo "Please upload plain text file only.";
 	}
@@ -51,8 +49,6 @@ if (isset($saved_file)) {
     // If we did, show a link to the uploaded file
     echo "<p>You can download your file <a href='/uploads/{$filename}'>here</a>.</p>";
 }
-
-
 ?>
 
 <!DOCTYPE html>
@@ -70,21 +66,24 @@ if (isset($saved_file)) {
 			<?php
 			//Saving the item
 			if (!empty($_POST)) {
-				$loaded_file[] = "{$_POST['item']}";
-				$todo_items [] = $loaded_file;
+				$todo_items[] = $_POST['item'];
+				save_list($todo_items);
 			}
 			//Delete an item
 			if (isset($_GET['removeIndex'])) {
 				$removeIndex = $_GET['removeIndex'];
- 				unset($loaded_file[$removeIndex]);
+ 				unset($todo_items[$removeIndex]);
+ 				save_list($todo_items);
+ 				header('Location: /todo_list2.php');
+ 				exit(0);
  			}
 			//Listing the item
-			foreach ($loaded_file as $index => $item) {
+			foreach ($todo_items as $index => $item) {
 				echo "<li>$item <a href=\"todo_list2.php?removeIndex={$index}\">Remove</a></li>";
 			}
-			save_list($loaded_file);
-
+			// save_list($todo_items);
 			?>
+
 		</ul>
 	<h2>Add an item:</h2>
 	<form method="POST" action="/todo_list2.php">
@@ -96,6 +95,8 @@ if (isset($saved_file)) {
 		<p>	
 			<label for="file1">Upload File: </label>
 			<input type="file" id="file1" name="file1">
+		</p>
+		<p>
 			<input type="submit" value="upload">
 		</p>		
 	</form>	
