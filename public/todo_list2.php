@@ -30,18 +30,21 @@ $loaded_file = open_list();
 
 //Check if file was uploaded and no errors
 if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
-//Where are the files being uploaded
-	$upload_directory = '/vagrant/sites/todo.dev/public/uploads/';
-//Grab file being uploaded by basename
-	$filename = basename($_FILES['file1']['name']);
-//Create new saved filename by using original name + upload directory name
-	$saved_file = $upload_directory . $filename;
-//Move file from it's temp location to uploads directory
-	move_uploaded_file($_FILES['file1']['tmp_name'], $saved_file);	
-
-
-	$uploaded_file = open_list($saved_file);
-	$loaded_file = array_merge($loaded_file, $uploaded_file);
+	if ($_FILES['file1']['type'] == 'text/plain') {
+	//Where are the files being uploaded
+		$upload_directory = '/vagrant/sites/todo.dev/public/uploads/';
+	//Grab file being uploaded by basename
+		$filename = basename($_FILES['file1']['name']);
+	//Create new saved filename by using original name + upload directory name
+		$saved_file = $upload_directory . $filename;
+	//Move file from it's temp location to uploads directory
+		move_uploaded_file($_FILES['file1']['tmp_name'], $saved_file);	
+		
+		$uploaded_file = open_list($saved_file);
+		$loaded_file = array_merge($loaded_file, $uploaded_file);
+	}else {
+		echo "Please upload plain text file only.";
+	}
 }
 //Test Uploading////////////////
 if (isset($saved_file)) {
