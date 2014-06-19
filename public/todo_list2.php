@@ -1,29 +1,10 @@
 <?php
 
-$todo_items = open_list();
-//==================================================
-function open_list($filename = 'list_items.txt') 
-{	
-    $filesize = filesize($filename);
-    if ($filesize > 0) 
-    {
-	    $content = fopen($filename, 'r');
-	    $fileString = trim(fread($content, $filesize));
-	    $file = explode("\n", $fileString);
-	    fclose($content);
-		return $file;
-	} else {
-		return [];
-	}	
-}
-//===================================================
-function save_list($list, $filename = 'list_items.txt')
-{   
-    $handle = fopen($filename, 'w');
-    $string = implode("\n", $list);
-    fwrite($handle, $string);
-    fclose($handle); 
-}
+require_once('classes/filestore.php');
+
+$todo = new Filestore('testlist.txt');
+
+$todo_items = $todo->read();
 //====================================================	
 //Check if file was uploaded and no errors
 if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
@@ -33,9 +14,9 @@ if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
 		$saved_file = $upload_directory . $filename;
 		move_uploaded_file($_FILES['file1']['tmp_name'], $saved_file);	
 		
-		$uploaded_file = open_list($saved_file);
+		$uploaded_file = $todo->read($saved_file);
 		$todo_items = array_merge($todo_items, $uploaded_file);
-		save_list($todo_items);
+		$todo->write($todo_items);
 	}else {
 		echo "Please upload plain text file only.";
 	}
@@ -43,20 +24,16 @@ if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
 //Saving the item
 if (!empty($_POST)) {
 	$todo_items[] = htmlspecialchars(strip_tags($_POST['item']));
-	save_list($todo_items);
+	$todo->write($todo_items);
 }
 //Delete an item
 if (isset($_GET['removeIndex'])) {
 	$removeIndex = $_GET['removeIndex'];
 	unset($todo_items[$removeIndex]);
-	save_list($todo_items);
+	$todo->write($todo_items);
 	header('Location: /todo_list2.php');
 	exit(0);
 	}
-//-------Test Uploading--------//
-// if (isset($saved_file)) {
-//     echo "<p>You can download your file <a href='/uploads/{$filename}'>here</a>.</p>";
-// }
 ?>
 
 <!DOCTYPE html>
