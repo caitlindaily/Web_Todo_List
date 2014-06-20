@@ -1,5 +1,7 @@
 <?php
 
+class InvalidInputException extends Exception{};
+
 require_once('classes/filestore.php');
 
 $todo = new Filestore('testlist.txt');
@@ -25,12 +27,12 @@ if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
 try {
 	if (!empty($_POST)) {
 		if (empty($_POST['item']) || (strlen($_POST['item']) > 240)) {
-				throw new Exception("Post cannot be empty or longer than 240 characters.");
+				throw new InvalidInputException("Post cannot be empty or longer than 240 characters.");
 			}	
 		$todo_items[] = htmlspecialchars(strip_tags($_POST['item']));
 		$todo->write($todo_items);
 	} 
-} catch (Exception $e) {
+} catch (InvalidInputException $e) {
 	$msg = $e->getMessage() . PHP_EOL;
 }	
 
