@@ -22,14 +22,17 @@ if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
 	}
 }
 //Saving the item
-if (!empty($_POST)) {
-	if (empty($_POST['item']) || (strlen($_POST['item']) > 240)) {
-			throw new Exception("Post cannot be empty or longer than 240 characters.");
-		}	
-	$todo_items[] = htmlspecialchars(strip_tags($_POST['item']));
-	$todo->write($todo_items);
-		
-} 
+try {
+	if (!empty($_POST)) {
+		if (empty($_POST['item']) || (strlen($_POST['item']) > 240)) {
+				throw new Exception("Post cannot be empty or longer than 240 characters.");
+			}	
+		$todo_items[] = htmlspecialchars(strip_tags($_POST['item']));
+		$todo->write($todo_items);
+	} 
+} catch (Exception $e) {
+	$msg = $e->getMessage() . PHP_EOL;
+}	
 
 //Delete an item
 if (isset($_GET['removeIndex'])) {
@@ -48,6 +51,10 @@ if (isset($_GET['removeIndex'])) {
 	<link rel="stylesheet" href="todo_list_stylesheet.css">
 </head>
 <body>
+	<? if(isset($msg)) : ?>
+		<h2><?= $msg; ?></h2>
+	<? endif; ?>
+
 	<h1>TODO List</h1>
 		<ul>
 			<? foreach ($todo_items as $index => $item) : ?>
