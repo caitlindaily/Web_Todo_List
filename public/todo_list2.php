@@ -1,68 +1,102 @@
 <?php
 
-class InvalidInputException extends Exception{};
+//Establish Database connection
+$dbc = new PDO('mysql:host=127.0.0.1;dbname=todo', 'caitlin', 'delinda');
+$dbc->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-require_once('classes/filestore.php');
 
-$todo = new Filestore('testlist.txt');
-
-$todo_items = $todo->read();
-//====================================================	
-//Check if file was uploaded and no errors
-if (count($_FILES) > 0 && $_FILES['file1']['error'] == 0) {
-	if ($_FILES['file1']['type'] == 'text/plain') {
-		$upload_directory = '/vagrant/sites/todo.dev/public/uploads/';
-		$filename = basename($_FILES['file1']['name']);
-		$saved_file = $upload_directory . $filename;
-		move_uploaded_file($_FILES['file1']['tmp_name'], $saved_file);	
-		
-		$uploaded_file = $todo->read($saved_file);
-		$todo_items = array_merge($todo_items, $uploaded_file);
-		$todo->write($todo_items);
-	}else {
-		echo "Please upload plain text file only.";
-	}
-}
-//Saving the item
 try {
-	if (!empty($_POST)) {
+	//--Adding Todo Items--//
+	if (!empty($_POST['item'])) {
 		if (empty($_POST['item']) || (strlen($_POST['item']) > 240)) {
-				throw new InvalidInputException("Post cannot be empty or longer than 240 characters.");
+				throw new Exception("Post cannot be empty or longer than 240 characters.");
 			}	
-		$todo_items[] = htmlspecialchars(strip_tags($_POST['item']));
-		$todo->write($todo_items);
+		$query = "INSERT INTO todo (item) VALUES (:item)";
+		$stmt = $dbc->prepare($query);
+
+		$stmt->bindValue(':item', $_POST['item'], PDO::PARAM_STR);
+		$stmt->execute();
 	} 
-} catch (InvalidInputException $e) {
+	//--Delete an item--//
+	if (isset($_POST['remove'])) {
+		$stmt = $dbc->prepare('DELETE FROM todo WHERE id = :id');
+		$stmt->bindValue(':id', $_POST['remove'], PDO::PARAM_INT);
+		$stmt->execute();
+		header('Location: /todo_list2.php');
+		exit(0);
+	}
+} catch (Exception $e) {
 	$msg = $e->getMessage() . PHP_EOL;
 }	
 
-//Delete an item
-if (isset($_GET['removeIndex'])) {
-	$removeIndex = $_GET['removeIndex'];
-	unset($todo_items[$removeIndex]);
-	$todo->write($todo_items);
-	header('Location: /todo_list2.php');
-	exit(0);
-	}
-?>
+//====================================================
+//--Determining Max Items Per Page--//
+$limit = 5;
+$count = $dbc->query('SELECT count(*) FROM todo')->fetchColumn();
+$numPages = ceil($count / $limit);
 
+//--Pagination Buttons--//
+$page = isset($_GET['page']) ? $_GET['page'] : 1;
+$nextPage = $page + 1;
+$prevPage = $page - 1;
+$offset = ($page - 1) * $limit;
+	
+//--Applying Item Limit & Offset Number--//
+$stmt = $dbc->prepare('SELECT * FROM todo LIMIT :limit OFFSET :offset');
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
+
+//--Retrieve List Data--//
+$getList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+?>
 <!DOCTYPE html>
 <html>
 <head>
 	<title>TODO List</title>
+	<!--Bootstrap and Stylesheet-->
 	<link rel="stylesheet" href="todo_list_stylesheet.css">
+	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+  	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 </head>
 <body>
+	<!--Exception Error Message-->
 	<? if(isset($msg)) : ?>
 		<h2><?= $msg; ?></h2>
 	<? endif; ?>
 
+	<!---Display of List-->
 	<h1>TODO List</h1>
 		<ul>
-			<? foreach ($todo_items as $index => $item) : ?>
-			<?= "<li>$item <a href=\"todo_list2.php?removeIndex={$index}\">Remove</a></li>"; ?>
+			<? foreach ($getList as $item) : ?>
+			<li><?=  $item['item']; ?><button class="btn btn- btn-xs btn-remove" data-todo="<?= $item['id']; ?>">Remove</button></li>
 			<? endforeach; ?>
 		</ul>
+
+	<!--Hidden Form to Delete Item-->
+	<p>
+	<form method="POST" id="remove-form" action="todo_list2.php">
+	    <input id="remove-id" type="hidden" name="remove">
+	</form>
+	</p>
+
+	<!-- Pagination -->
+	<ul class="pager">
+		<?if($page == 1 && $numPages > 1): ?>
+  			<li class="active"><a href="/todo_list2.php?page=<?= $nextPage; ?>">Next</a></li>
+  		<? endif; ?>	
+  		<?if ($page > 1 && $numPages > $page) : ?>
+  			<li class="active"><a href="/todo_list2.php?page=<?= $nextPage; ?>">Next</a></li>
+  			<li class="active"><a href="/todo_list2.php?page=<?= $prevPage; ?>">Previous</a></li>
+  		<? endif; ?>	
+  		<? if ($page == $numPages && $numPages > 1) : ?>
+  			<li class="active"><a href="/todo_list2.php?page=<?= $prevPage; ?>">Previous</a></li>
+		<?endif; ?>
+  	</ul>
+	</div>	
+
+	<!--Form: Adding Item-->
 	<h2>Add an item:</h2>
 	<p>
 	<form method="POST" action="/todo_list2.php">
@@ -70,16 +104,18 @@ if (isset($_GET['removeIndex'])) {
 		<input id="item" name="item" type="text" placeholder="Enter new item">
 		<button type="submit">Submit</button>
 	</form>
-	</p>
-	<h2>Upload a File</h2>
-	<form method="POST" enctype="multipart/form-data">
-		<p>	
-			<label for="file1">Upload File: </label>
-			<input type="file" id="file1" name="file1">
-		</p>
-		<p>
-			<input type="submit" value="upload">
-		</p>		
-	</form>	
+
+	<!--JQuery-->
+	<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+	<script>
+
+	$('.btn-remove').click(function () {
+	    var todoId = $(this).data('todo');
+	    if (confirm('Are you sure you want to remove item ' + todoId + '?')) {
+	        $('#remove-id').val(todoId);
+	        $('#remove-form').submit();
+	    }
+	});
+	</script>
 </body>
 </html>
