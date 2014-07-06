@@ -1,0 +1,35 @@
+h1 {
+	/*font-family: Watermelon;*/
+	font-size: 56px;
+	color: #FFFFFF;
+	text-align: center;
+	text-decoration: underline;
+}
+
+ul {
+	text-align: center;
+	font-size: 32px;
+	/*font-family: Cursive;*/
+	background-color: #17F4FF;
+	list-style-type: none;
+}
+
+body {
+	background-color: #17B4FF;
+
+}
+
+a { 
+	color: #000000;
+	font-size: 15px;
+}
+
+a:hover {
+	color: #FFFFFF;
+}
+
+h2 {
+	font-family: Arial;
+	font-size: 24px;
+	color: #000000;
+}
